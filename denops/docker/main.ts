@@ -9,7 +9,7 @@ import open from "jsr:@rdsq/open@1.0.1";
 import * as docker from "./docker.ts";
 import * as action from "./action.ts";
 import { makeTableString } from "./table.ts";
-import { SearchImage } from "./types.ts";
+import { Container, SearchImage } from "./types.ts";
 import { runTerminal } from "./vim_util.ts";
 import {
   buildDockerCommand,
@@ -51,6 +51,15 @@ export const main: Entrypoint = async (denops) => {
       `call denops#notify("${denops.name}", "dockerhub", [])`,
     );
   });
+
+  function getContainerName(container: Container) {
+    const name = container?.Names[0]?.substring(1);
+    if (!name) {
+      console.log("container not found");
+      return;
+    }
+    return name;
+  }
 
   denops.dispatcher = {
     async listContainer() {
@@ -99,7 +108,10 @@ export const main: Entrypoint = async (denops) => {
 
     async editContainerFile() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await denops.call("docker#editContainerFile", name);
     },
 
@@ -311,13 +323,13 @@ export const main: Entrypoint = async (denops) => {
           lhs: "<Plug>(docker-container-start)",
           rhs:
             `:call denops#notify("${denops.name}", "startContainer", [])<CR>`,
-          default: "u",
+          default: "S",
         },
         {
           mode: ["n"],
           lhs: "<Plug>(docker-container-stop)",
           rhs: `:call denops#notify("${denops.name}", "stopContainer", [])<CR>`,
-          default: "d",
+          default: "O",
         },
         {
           mode: ["n"],
@@ -343,14 +355,14 @@ export const main: Entrypoint = async (denops) => {
           lhs: "<Plug>(docker-container-log)",
           rhs:
             `:call denops#notify("${denops.name}", "tailContainerLogs", [])<CR>`,
-          default: "t",
+          default: "L",
         },
         {
           mode: ["n"],
           lhs: "<Plug>(docker-container-remove)",
           rhs:
             `:call denops#notify("${denops.name}", "removeContainer", [])<CR>`,
-          default: "<C-d>",
+          default: "D",
         },
         {
           mode: ["n"],
@@ -392,7 +404,7 @@ export const main: Entrypoint = async (denops) => {
           lhs: "<Plug>(docker-container-open-browser)",
           rhs:
             `:call denops#notify("${denops.name}", "containerOpenBrowser", [])<CR>`,
-          default: "<C-o>",
+          default: "<C-b>",
         },
       ];
 
@@ -419,7 +431,10 @@ export const main: Entrypoint = async (denops) => {
       const from = await denops.call("input", "from: ", "", "file") as string;
       const to = await denops.call("input", "to: ") as string;
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await action.copyFileToContainer(name, from, to);
       console.log(`success to copy ${from} to ${name}:${to}`);
     },
@@ -428,7 +443,10 @@ export const main: Entrypoint = async (denops) => {
       const from = await denops.call("input", "from: ") as string;
       const to = await denops.call("input", "to: ", "", "file") as string;
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await action.copyFileFromContainer(name, from, to);
       console.log(`success to copy ${name}:${from} to ${to}`);
     },
@@ -440,19 +458,28 @@ export const main: Entrypoint = async (denops) => {
 
     async attachContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await action.attachContainer(denops, name);
     },
 
     async execContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await action.execContainer(denops, name);
     },
 
     async startContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       console.log(`starting ${name}`);
       if (await action.startContainer(name)) {
         console.log(`started ${name}`);
@@ -462,7 +489,10 @@ export const main: Entrypoint = async (denops) => {
 
     async stopContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       console.log(`stopping ${name}`);
       if (await action.stopContainer(name)) {
         console.log(`stoped ${name}`);
@@ -472,7 +502,10 @@ export const main: Entrypoint = async (denops) => {
 
     async restartContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       console.log(`restarting ${name}`);
       if (await action.restartContainer(name)) {
         console.log(`restarted ${name}`);
@@ -482,7 +515,10 @@ export const main: Entrypoint = async (denops) => {
 
     async killContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       console.log(`killing ${name}`);
       if (await action.killContainer(container.Id)) {
         console.log(`killed ${name}`);
@@ -505,7 +541,10 @@ export const main: Entrypoint = async (denops) => {
 
     async inspectContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       await action.inspect(denops, name);
     },
 
@@ -532,7 +571,10 @@ export const main: Entrypoint = async (denops) => {
 
     async removeContainer() {
       const container = await getContainer(denops);
-      const name = container.Names[0].substring(1);
+      const name = getContainerName(container);
+      if (!name) {
+        return;
+      }
       const input = await denops.eval(
         `input("Do you want to remove ${name}?(y/n): ")`,
       ) as string;
