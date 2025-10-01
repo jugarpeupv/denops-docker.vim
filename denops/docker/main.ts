@@ -264,13 +264,13 @@ export const main: Entrypoint = async (denops) => {
           mode: ["n"],
           lhs: "<Plug>(docker-image-quickrun)",
           rhs: `:call denops#notify("${denops.name}", "quickrunImage", [])<CR>`,
-          default: "r",
+          default: "S",
         },
         {
           mode: ["n"],
           lhs: "<Plug>(docker-image-remove)",
           rhs: `:call denops#notify("${denops.name}", "removeImage", [])<CR>`,
-          default: "<C-d>",
+          default: "D",
         },
         {
           mode: ["n"],
