@@ -33,14 +33,21 @@ function isObject(obj: unknown): obj is Record<string, unknown> {
 }
 
 export async function request<T>(req: Request): Promise<Response<T>> {
-  const socket = await connect();
+  let socket;
   try {
+      socket = await connect();
     const reqStr = newRequest(req);
     await socket.write(new TextEncoder().encode(reqStr));
     const resp = await readResponse<T>(socket);
     return resp;
+  } catch (e) {
+    console.warn(" Docker Desktop is not initialized, please open it first!");
+    // return Promise.reject(e);
+    return Promise.resolve({ status: 503, header: new Headers(), body: null as T });
   } finally {
-    socket.close();
+    if (socket) {
+      socket.close();
+    }
   }
 }
 
@@ -48,26 +55,22 @@ export async function post(
   endpoint: string,
   opts?: Options,
 ): Promise<Response> {
-  const resp = await request(
-    {
-      url: endpoint,
-      method: "POST",
-      header: opts?.header,
-      params: opts?.params,
-    },
-  );
+  const resp = await request({
+    url: endpoint,
+    method: "POST",
+    header: opts?.header,
+    params: opts?.params,
+  });
   return resp;
 }
 
 export async function del(endpoint: string, opts?: Options): Promise<Response> {
-  const resp = await request(
-    {
-      url: endpoint,
-      method: "DELETE",
-      header: opts?.header,
-      params: opts?.params,
-    },
-  );
+  const resp = await request({
+    url: endpoint,
+    method: "DELETE",
+    header: opts?.header,
+    params: opts?.params,
+  });
   return resp;
 }
 
@@ -75,13 +78,11 @@ export async function get<T>(
   endpoint: string,
   opts?: Options,
 ): Promise<Response<T>> {
-  const resp = await request<T>(
-    {
-      url: endpoint,
-      header: opts?.header,
-      params: opts?.params,
-    },
-  );
+  const resp = await request<T>({
+    url: endpoint,
+    header: opts?.header,
+    params: opts?.params,
+  });
   return resp;
 }
 
@@ -120,10 +121,7 @@ export function newRequest(req: Request): string {
 
 const decoder = new TextDecoder();
 
-async function read(
-  r: BufReader,
-  headers: Headers,
-): Promise<string> {
+async function read(r: BufReader, headers: Headers): Promise<string> {
   const contentLength = headers.get("content-length");
   const isChunked = headers.get("transfer-encoding")! === "chunked";
 
@@ -184,8 +182,8 @@ export async function readResponse<T>(r: Deno.Conn): Promise<Response<T>> {
   }
 
   const body = status == "204" || status == "304"
-    ? ""
-    : JSON.parse(await read(reader, header));
+      ? ""
+      : JSON.parse(await read(reader, header));
 
   return {
     status: parseInt(status),

@@ -90,6 +90,9 @@ function makeImageTable(images: Image[]): string[] {
 
 function makeContainerTable(containers: Container[]): string[] {
   const body = new Array<Array<string>>();
+  if (!containers) {
+    return [];
+  }
   containers.forEach((container) => {
     const line = [
       container.Id.substring(0, 12),
